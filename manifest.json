@@ -1,0 +1,18 @@
+{
+  "short_name": "DGS-Trans",
+  "name": "DGS Gebärden-Übersetzer",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3596/3596091.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/index.html",
+  "background_color": "#f8f9fc",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#4361ee",
+  "description": "Übersetzt Texte in Deutsche Gebärdensprache"
+}

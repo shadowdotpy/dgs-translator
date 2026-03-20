@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gebärden-Übersetzer (DGS)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gebärden-Übersetzer (DGS)</h1>
+            <p class="subtitle">Direkt und schnell im Browser übersetzen</p>
+        </header>
+        
+        <div class="main-card">
+            <div class="input-section">
+                <input type="text" id="userInput" placeholder="Satz eingeben (z.B. Ich aß Pizza)">
+                <div class="button-group">
+                    <button id="translateBtn" class="primary-btn">Übersetzen</button>
+                    <button id="clearBtn" class="secondary-btn" title="Löschen">✕</button>
+                </div>
+            </div>
+            <div id="glossContainer" class="gloss-container" style="display: none;">
+                <span class="label">DGS GLOSSEN (PRÄSENS):</span>
+                <div id="glossOutput"></div>
+            </div>
+            <div id="status" class="status-text">Bereit.</div>
+        </div>
+
+        <div class="display-section">
+            <div class="active-word-badge"><span id="currentWord">-</span></div>
+            <div id="videoContainer" class="video-playlist"></div>
+            <div id="videoCredits" class="credits-box"></div>
+        </div>
+
+        <footer>
+            <p>Daten via <a href="https://signdict.org" target="_blank">SignDict API</a> | Hosted on GitHub | Made by <a href="https://instagram.com/captured.by.hannes" target="_blank">shadowdotpy</a></p>
+        </footer>
+    </div>
+    <script src="translate.js"></script>
+</body>
+</html>
