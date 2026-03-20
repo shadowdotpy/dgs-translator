@@ -32,9 +32,9 @@ translateBtn.addEventListener('click', async () => {
     videoContainer.innerHTML = "";
     videoCredits.innerHTML = "";
     videoQueue = [];
-    
+
     const glosses = transformToDGS(text);
-    initGlosses(glosses); 
+    initGlosses(glosses);
 
     statusDisplay.innerText = "Suche Gebärden...";
 
@@ -42,14 +42,14 @@ translateBtn.addEventListener('click', async () => {
         const word = glosses[i];
         const data = await fetchSignVideoData(word);
         const glossSpan = document.getElementById(`gloss-${i}`);
-        
+
         if (data) {
             const index = videoQueue.length;
             videoQueue.push(data);
             addVideoToUI(data, index);
-            if(glossSpan) glossSpan.className = "found";
+            if (glossSpan) glossSpan.className = "found";
         } else {
-            if(glossSpan) glossSpan.className = "missing";
+            if (glossSpan) glossSpan.className = "missing";
         }
     }
 
@@ -76,31 +76,56 @@ async function fetchSignVideoData(word) {
       }
     }`;
 
+    // Wir fügen &raw=true hinzu und erzwingen JSON im Header
     const targetUrl = `https://signdict.org/graphql-api/graphiql?query=${encodeURIComponent(query)}&raw=true`;
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
 
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetch(proxyUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error("Netzwerk-Antwort war nicht ok");
+
         const rawData = await response.json();
         const content = rawData.contents;
 
         let resultData;
         try {
+            // Versuch 1: Normales Parsen
             resultData = JSON.parse(content);
         } catch (e) {
-            // Extraktions-Logik für HTML-Umschlag
+            // Versuch 2: Extraktion aus dem GraphiQL-HTML
+            console.log("HTML erkannt, versuche JSON zu extrahieren...");
             const startMarker = "response: '";
             const endMarker = "',\n        variables:";
+
             if (content.includes(startMarker)) {
                 let jsonPart = content.split(startMarker)[1].split(endMarker)[0];
-                jsonPart = jsonPart.replace(/\\n/g, '');
+                // Bereinige escaped characters (\n, \", etc.)
+                jsonPart = jsonPart.replace(/\\n/g, '').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
                 resultData = JSON.parse(jsonPart);
-            } else return null;
+            } else {
+                return null;
+            }
         }
 
         const searchResults = resultData.data?.search || [];
-        let entry = searchResults.find(e => e.text.toLowerCase() === word.toLowerCase() && e.currentVideo?.videoUrl) 
-                    || searchResults.find(e => e.currentVideo?.videoUrl);
+
+        // 1. Priorität: Suche nach einer EXAKTEN Übereinstimmung (Case Insensitive)
+        let entry = searchResults.find(e =>
+            e.text.toLowerCase() === word.toLowerCase() &&
+            e.currentVideo?.videoUrl
+        );
+
+        // 2. Priorität: Falls keine exakte Übereinstimmung, aber das Wort im Titel vorkommt 
+        // (und nicht nur als Teil eines anderen Wortes wie 'Gedicht')
+        if (!entry) {
+            entry = searchResults.find(e => {
+                const wordsInResult = e.text.toLowerCase().split(/\s+/);
+                return wordsInResult.includes(word.toLowerCase()) && e.currentVideo?.videoUrl;
+            });
+        }
 
         if (entry && entry.currentVideo) {
             return {
@@ -110,7 +135,9 @@ async function fetchSignVideoData(word) {
                 copyright: entry.currentVideo.copyright || ""
             };
         }
-    } catch (e) { console.error("API Fehler:", e); }
+    } catch (e) {
+        console.error("Fehler bei API-Abfrage für " + word + ":", e);
+    }
     return null;
 }
 
@@ -134,28 +161,28 @@ function playVideoAtIndex(index, continueNext) {
     const data = videoQueue[index];
     const itemEl = document.getElementById(`item-${index}`);
     const vid = itemEl.querySelector('video');
-    
+
     document.querySelectorAll('.video-item').forEach(el => el.classList.remove('active'));
     itemEl.classList.add('active');
     currentWordDisplay.innerText = data.word;
     videoCredits.innerHTML = `Quelle: <b>${data.user}</b> ${data.copyright}`;
     itemEl.scrollIntoView({ behavior: 'smooth', inline: 'center' });
 
-    vid.play().catch(() => {});
-    vid.onended = () => { 
+    vid.play().catch(() => { });
+    vid.onended = () => {
         if (continueNext && isSequenceRunning) {
             setTimeout(() => playVideoAtIndex(index + 1, true), 500);
         }
     };
 }
 
-function stopAllVideos() { 
-    videoContainer.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; }); 
+function stopAllVideos() {
+    videoContainer.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; });
 }
 
 function transformToDGS(sentence) {
     const STOP_WORDS = ['ist', 'sind', 'bin', 'ein', 'eine', 'der', 'die', 'das', 'und'];
-    
+
     // Mapping für Zeitformen (Erweiterbar)
     const TENSE_MAP = {
         // Essen & Trinken
@@ -181,12 +208,12 @@ function transformToDGS(sentence) {
     };
 
     return sentence.toLowerCase().replace(/[.!?,]/g, "").split(/\s+/)
-                   .filter(w => !STOP_WORDS.includes(w) && w.length > 0)
-                   .map(w => {
-                       // Zeitform umwandeln falls im Mapping vorhanden, sonst Original
-                       const baseForm = TENSE_MAP[w] || w;
-                       return baseForm.toUpperCase();
-                   });
+        .filter(w => !STOP_WORDS.includes(w) && w.length > 0)
+        .map(w => {
+            // Zeitform umwandeln falls im Mapping vorhanden, sonst Original
+            const baseForm = TENSE_MAP[w] || w;
+            return baseForm.toUpperCase();
+        });
 }
 
 // Drag Logik
